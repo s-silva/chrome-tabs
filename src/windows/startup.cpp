@@ -16,6 +16,175 @@ int mwindow = 0;
 #define CHILD_STYLES   (WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS)
 #define CHILD_EXSTYLES (0)
 
+int window_count = 0;
+
+struct window_tab
+{
+	string  title;
+	void   *data;
+	int     index;
+	int     isactive;
+	int     window_index;
+	HWND    wnd;
+} *tab_set = 0;
+
+int   tab_count = 0;
+HWND  tab_windows[32];
+int   current_tab_id = 0;
+
+/* tab management */
+
+int twindow_getid(HWND wnd)
+{
+	int i;
+	for(i=0; i<window_count; i++)
+	{
+		if(tab_windows[i] == wnd)
+			return i;
+	}
+	return -1;
+}
+
+int twindow_new(HWND wnd)
+{
+	if(window_count >= 31) return -1;
+	tab_windows[window_count++] = wnd;	
+	return window_count - 1;
+}
+
+int twindow_remove(HWND wnd)
+{
+	int i;
+	for(i=0; i<window_count; i++)
+	{
+		if(tab_windows[i] == wnd)
+		{
+			tab_windows[i] = tab_windows[window_count - 1];
+			window_count--;
+		}
+	}
+}
+
+int twindow_get_ctab(HWND wnd)
+{
+	int i;
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].wnd == wnd)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+int tab_new(const string title, int windowid)
+{
+	int tc = tab_count;
+
+	tab_count++;
+	tab_set = (struct window_tab*) sys_mem_realloc(tab_set, sizeof(struct window_tab) * tab_count);
+	if(!tab_set) return 0;
+
+	tab_set[tc].title = (string)sys_mem_alloc(str_len(title) + 16);
+	str_cpy(tab_set[tc].title, title);
+
+	tab_set[tc].index = tc;
+	tab_set[tc].isactive = 1;
+	tab_set[tc].window_index = windowid;
+	tab_set[tc].data = 0;
+	tab_set[tc].wnd = tab_windows[windowid];
+	return tc;
+}
+
+int tab_remove(int windowid, int tabid)
+{
+
+}
+
+int tab_uninit()
+{
+	int i;
+
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].title)
+			sys_mem_free(tab_set[i].title);
+	}
+
+	if(tab_set) sys_mem_free(tab_set);
+
+	tab_set = 0;
+	tab_count = 0;
+	window_count = 0;
+
+	return 0;
+}
+
+HWND tab_get_window(int tabid)
+{
+
+}
+
+int tab_get_tab_count(int winid)
+{
+	int i, c = 0;
+
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].window_index == winid) c++;
+	}
+
+	return c;
+}
+
+int tab_move(int tabid, int winid)
+{
+	if(tabid < 0) return -1;
+	if(tabid >= tab_count) return -1;
+
+	tab_set[tabid].window_index = winid;
+	tab_set[tabid].wnd = tab_windows[winid];
+}
+
+HWND tab_is_window(int x, int y)
+{
+	int i;
+	RECT r;
+	HWND hwnd = 0;
+	for(i=0; i<window_count; i++)
+	{
+		hwnd = tab_windows[i];
+		GetWindowRect(hwnd, &r);
+		if(x > r.left && x < r.right && y > r.top && y < r.bottom)
+		{
+			return hwnd;
+		}
+	}
+
+	return 0;
+}
+
+
+void tab_cleanwindows()
+{
+	int i;
+
+	for(i=0; i<window_count; i++)
+	{
+		if(tab_get_tab_count(i) == 0)
+		{
+			ShowWindow(tab_windows[i], SW_HIDE);
+			twindow_remove(tab_windows[i]);
+		}
+	}
+
+}
+
+
+/* main */
+
+
 
 int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow) 
 { 
@@ -69,6 +238,10 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 
 	ShowWindow(hwnd,nCmdShow); 
 	UpdateWindow(hwnd); 
+
+	int winid = twindow_new(hwnd);
+	current_tab_id = tab_new(uni("Tab 1"), winid);
+	tab_new(uni("Tab 2"), winid);
 
 
 
@@ -148,16 +321,28 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			ui_shape_draw_rect(gr, 0xff878787, 0, 58, r.right, r.bottom);
 			ui_shape_draw_rect(gr, 0xffe2ebf1, 0, 23, r.right, 35);
 
+			int i, xpos = 10;
+			for(i=0; i<tab_count; i++)
+			{
+				if(tab_set[i].wnd == hwnd)
+				{
+					ui_text_draw(gr, tab_set[i].title, 0xff222222, xpos, 10, 0);
+					xpos += 60;
+				}
+			}
+
 			EndPaint(hwnd, &ps);
 			break; 
 		} 
 
 		case WM_DESTROY: 
+			tab_uninit();
 			PostQuitMessage(0); 
 			break; 
 
 		case WM_LBUTTONDOWN:
 			mwindow = 0;
+			SetCapture(hwnd);
 			if(HIWORD(lparam) < 23)
 			{
 				if(LOWORD(lparam) < 200)
@@ -167,21 +352,35 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					POINT pt;
 					GetCursorPos(&pt);
 
-					
-					ShowWindow(hwnd_tabbutton, SW_SHOW);
-					SetWindowPos(hwnd_tabbutton, 0, pt.x, pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+					current_tab_id = twindow_get_ctab(hwnd);
 
-					SendMessage(hwnd_tabbutton, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
-					cap = 1;
+					if(current_tab_id >= 0)
+					{
+						ShowWindow(hwnd_tabbutton, SW_SHOW);
+						SetWindowPos(hwnd_tabbutton, 0, pt.x, pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+						//SendMessage(hwnd_tabbutton, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
+						cap = 1;
+					}
 				}
 			}
 			break;
 
 		case WM_LBUTTONUP:
+			if(cap) SendMessage(hwnd_tabbutton, WM_LBUTTONUP, 0, 0);
 			cap = 0;
 			ReleaseCapture();
-			SendMessage(hwnd_tabbutton, WM_LBUTTONUP, HTCAPTION, 0); 
-			break;  
+			break;
+
+		case WM_MOUSEMOVE:
+			if(cap)
+			{
+				POINT p;
+				GetCursorPos(&p);
+				SetWindowPos(hwnd_tabbutton, NULL, p.x, p.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+				return 0;
+			}
+			break;
 
 
 		default: 
@@ -260,13 +459,40 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 	case WM_NCLBUTTONUP:
 	case WM_LBUTTONUP:
 		{
-			HWND hw = CreateWindowEx(WS_EX_WINDOWEDGE, application_title,application_title, 
-							WS_SIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_POPUP, 
-							CW_USEDEFAULT,CW_USEDEFAULT,1000,500, 
-							NULL,NULL,application_instance,NULL); 
+			POINT pt;
+			GetCursorPos(&pt);
+			HWND hw = 0;
+			HWND hover_tab_window = tab_is_window(pt.x, pt.y);
 
-			ShowWindow(hw,SW_SHOW);
-			UpdateWindow(hw); 
+
+			ShowWindow(hwnd_tabbutton, SW_HIDE);
+			if(!hover_tab_window)
+			{
+				
+				hw = CreateWindowEx(WS_EX_WINDOWEDGE, application_title,application_title, 
+								WS_OVERLAPPEDWINDOW, 
+								pt.x,pt.y,1000,500, 
+								NULL,NULL,application_instance,NULL); 
+
+				int winid = twindow_new(hw);
+				if(winid < 0) break;
+
+				tab_move(current_tab_id, winid);
+			}else{
+
+				SetForegroundWindow(hover_tab_window);
+				tab_move(current_tab_id, twindow_getid(hover_tab_window));
+				hw = hover_tab_window;
+			}
+
+			tab_cleanwindows();
+
+			if(hw)
+			{
+				SetParent(hwnd2, hw);
+				ShowWindow(hw,SW_SHOW);
+				UpdateWindow(hw); 
+			}
 		
 		}
 		break;
