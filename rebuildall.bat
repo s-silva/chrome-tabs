@@ -1,2 +1,2 @@
-cd studio/build/win
+cd build/win
 rebuild.bat
