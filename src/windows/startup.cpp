@@ -4,6 +4,7 @@
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
 LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
 LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
+void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible);
 
 HINSTANCE application_instance = 0;
 HWND hwnd2 = 0, hwnd1 = 0, hwnd_tabbutton = 0;
@@ -132,7 +133,7 @@ int tab_get_tab_count(int winid)
 
 	for(i=0; i<tab_count; i++)
 	{
-		if(tab_set[i].window_index == winid) c++;
+		if(tab_set[i].wnd == tab_windows[winid]) c++;
 	}
 
 	return c;
@@ -243,7 +244,7 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	current_tab_id = tab_new(uni("Tab 1"), winid);
 	tab_new(uni("Tab 2"), winid);
 
-
+	draw_tabs(hwnd, -1, 0, 0);
 
 		hwnd2 = CreateWindow(uni("Resample1CWindow"),application_title, 
 		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
@@ -266,7 +267,7 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	wc.hInstance=hInst; 
 	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
 	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(128, 128,128)); 
+	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xe2, 0xeb, 0xf1)); 
 	wc.lpszMenuName=NULL; 
 	wc.lpszClassName=uni("ResampleTabButton"); 
 
@@ -296,6 +297,52 @@ void grdraw(graphic_context &gr)
 	gr.FillRectangle (&brush2, 0, 60, 2000, 2000);
 }
 
+
+void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isctabvisible)
+{
+
+	int i, xpos = 10;
+	int tab_width = 160;
+
+	//tab_width = w / tab_count;
+	//if(tab_width > 160) tab_width = 160;
+
+	ui_shape_draw_rect(gr, 0xffd9e3ec, 0, 0, w, 23);
+
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].wnd == hwnd)
+		{
+			ui_shape_draw_rect(gr, 0xffe2ebf1, xpos, 2, tab_width - 3, 21);
+			ui_text_draw(gr, tab_set[i].title, 0xff60898c, xpos + 4, 5, 0);
+			xpos += tab_width;
+		}
+	}
+}
+
+
+void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible)
+{
+	PAINTSTRUCT ps; 
+	HDC hdc; 
+	RECT r; 
+	
+	GetClientRect(hwnd,&r); 
+	hdc = GetDC(hwnd);
+	Graphics gr(hdc);
+
+
+	gr.SetSmoothingMode(SmoothingModeAntiAlias);
+	gr.SetInterpolationMode(InterpolationModeHighQualityBicubic);
+
+	draw_tabs_gr(gr, hwnd, r.right, ctabid, ctabx, isctabvisible);
+
+	ReleaseDC(hwnd, hdc);
+	//EndPaint(hwnd, &ps);
+}
+
+
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 { 
 	switch (msg) 
@@ -321,17 +368,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			ui_shape_draw_rect(gr, 0xff878787, 0, 58, r.right, r.bottom);
 			ui_shape_draw_rect(gr, 0xffe2ebf1, 0, 23, r.right, 35);
 
-			int i, xpos = 10;
-			for(i=0; i<tab_count; i++)
-			{
-				if(tab_set[i].wnd == hwnd)
-				{
-					ui_text_draw(gr, tab_set[i].title, 0xff222222, xpos, 10, 0);
-					xpos += 60;
-				}
-			}
-
+			
 			EndPaint(hwnd, &ps);
+
+			draw_tabs(hwnd, -1, 0, 0);
+
 			break; 
 		} 
 
@@ -345,7 +386,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetCapture(hwnd);
 			if(HIWORD(lparam) < 23)
 			{
-				if(LOWORD(lparam) < 200)
+				if(LOWORD(lparam) < 10)
 				{
 					SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
 				}else{
@@ -369,15 +410,32 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case WM_LBUTTONUP:
 			if(cap) SendMessage(hwnd_tabbutton, WM_LBUTTONUP, 0, 0);
 			cap = 0;
+			draw_tabs(hwnd, -1, 0, 0);
 			ReleaseCapture();
 			break;
 
 		case WM_MOUSEMOVE:
 			if(cap)
 			{
-				POINT p;
+				POINT p, clp;
+				RECT r;
+
 				GetCursorPos(&p);
-				SetWindowPos(hwnd_tabbutton, NULL, p.x, p.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+				GetClientRect(hwnd, &r);
+
+				clp.x = 0;
+				clp.y = 2;
+
+				ClientToScreen(hwnd, &clp);
+
+
+				if(LOWORD(lparam) < -20 || LOWORD(lparam) > r.right || HIWORD(lparam) < 0 || HIWORD(lparam) > 45)
+				{
+					SetWindowPos(hwnd_tabbutton, NULL, p.x, p.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+				}else{
+					SetWindowPos(hwnd_tabbutton, NULL, p.x, clp.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+					draw_tabs(hwnd, current_tab_id, p.x, 0);
+				}
 				return 0;
 			}
 			break;
@@ -482,6 +540,7 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 
 				SetForegroundWindow(hover_tab_window);
 				tab_move(current_tab_id, twindow_getid(hover_tab_window));
+				draw_tabs(hover_tab_window, -1, 0, 0);
 				hw = hover_tab_window;
 			}
 
@@ -490,7 +549,12 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			if(hw)
 			{
 				SetParent(hwnd2, hw);
-				ShowWindow(hw,SW_SHOW);
+
+				if(pt.y < 50)
+					ShowWindow(hw,SW_SHOWMAXIMIZED);
+				else
+					ShowWindow(hw,SW_SHOW);
+
 				UpdateWindow(hw); 
 			}
 		
