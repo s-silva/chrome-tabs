@@ -8,6 +8,10 @@ window
 * Windows without any tabs left will be closed.
 * Clicking on a tab will switch the child window belong to the tab in front.
 
+##Screenshot
+
+![Screenshot](/img/sc.png)
+
 ##To Do
 
 * The user should be able to arrange the tabs.
