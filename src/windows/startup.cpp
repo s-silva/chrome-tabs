@@ -26,7 +26,7 @@ struct window_tab
 	int     index;
 	int     isactive;
 	int     window_index;
-	HWND    wnd;
+	HWND    wnd, panel;
 } *tab_set = 0;
 
 int   tab_count = 0;
@@ -95,7 +95,18 @@ int tab_new(const string title, int windowid)
 	tab_set[tc].window_index = windowid;
 	tab_set[tc].data = 0;
 	tab_set[tc].wnd = tab_windows[windowid];
+	tab_set[tc].panel = 0;
 	return tc;
+}
+
+void tab_setpanel(int tc, HWND wnd)
+{
+	tab_set[tc].panel = wnd;
+}
+
+HWND tab_getpanel(int tc)
+{
+	return tab_set[tc].panel;
 }
 
 int tab_remove(int windowid, int tabid)
@@ -222,7 +233,7 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	wc.hInstance=hInst; 
 	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
 	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0, 0,0)); 
+	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(172, 172, 172)); 
 	wc.lpszMenuName=NULL; 
 	wc.lpszClassName=uni("Resample1CWindow"); 
 
@@ -241,18 +252,25 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	UpdateWindow(hwnd); 
 
 	int winid = twindow_new(hwnd);
-	current_tab_id = tab_new(uni("Tab 1"), winid);
-	tab_new(uni("Tab 2"), winid);
+	
 
 	draw_tabs(hwnd, -1, 0, 0);
 
-		hwnd2 = CreateWindow(uni("Resample1CWindow"),application_title, 
+	hwnd2 = CreateWindow(uni("Resample1CWindow"),uni("Tab 1"), 
 		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
 		0,58,1000,700, 
 		hwnd,NULL,hInst,NULL); 
 
+	HWND hwnd3 = CreateWindow(uni("Resample1CWindow"),uni("Tab 2"), 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
+		0,58,1000,700, 
+		hwnd,NULL,hInst,NULL); 
 
+	current_tab_id = tab_new(uni("Tab 1"), winid);
+	tab_setpanel(current_tab_id, hwnd2);
 
+	int nid = tab_new(uni("Tab 2"), winid);
+	tab_setpanel(nid, hwnd3);
 
 	ShowWindow(hwnd2,nCmdShow); 
 	UpdateWindow(hwnd2); 
@@ -452,51 +470,25 @@ LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 { 
 	switch (msg) 
 	{ 
-		case WM_MOVING:
-		{
-			/*RECT *rect;
-			rect = (RECT*)lparam;
-			 POINT pt;
-			GetCursorPos(&pt);
-			if(pt.x < 500 && pt.y < 500)
-			{
-					RECT rtp;
-					GetWindowRect(hwnd1, &rtp);
-					cap = 1;
-					//SetPopupStyle(hwnd2, hwnd1);
-					{
+	case WM_PAINT: 
+		{ 
+			PAINTSTRUCT ps; 
+			HDC hdc; 
+			RECT r;
+			letter buf[128];
 
-						 rect->top = rtp.top + 58;
-						 rect->left = rtp.left;
-						 rect->right = rtp.right;
-						 rect->bottom = rtp.bottom - 58;
-						 PostMessage(hwnd2, WM_NCLBUTTONUP, HTCAPTION, 0);
-					}
-			}else{
-					//SetPopupStyle(hwnd2, 0);
-				if(!mwindow)
-				{
-					mwindow = 1;
-						HWND hw = CreateWindowEx(WS_EX_WINDOWEDGE, application_title,application_title, 
-							WS_SIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_POPUP, 
-							CW_USEDEFAULT,CW_USEDEFAULT,1000,500, 
-							NULL,NULL,application_instance,NULL); 
+			GetClientRect(hwnd,&r); 
+			hdc = BeginPaint(hwnd, &ps);
+			Graphics gr(hdc);
 
-							ShowWindow(hw,SW_SHOW);
-													UpdateWindow(hw); 
-												}
-					cap = 0;
-			}*/
-		}
-			break;
+			gr.SetSmoothingMode(SmoothingModeAntiAlias);
+			gr.SetInterpolationMode(InterpolationModeHighQualityBicubic);
 
-	case WM_LBUTTONDOWN:
-		if(LOWORD(lparam) < 200)
-		{
-			SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
-		}else{
-			SendMessage(hwnd2, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
-			cap = 1;
+			GetWindowText(hwnd, buf, 128);
+			ui_text_draw(gr, buf, 0xff60898c, (r.right / 2) - 10, ((r.bottom - r.top) / 2) - 5, 0);
+
+			EndPaint(hwnd, &ps);
+			break; 
 		}
 		break;
 
@@ -548,7 +540,11 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 
 			if(hw)
 			{
-				SetParent(hwnd2, hw);
+				///SetParent(hwnd2, hw);
+				HWND panel = tab_getpanel(current_tab_id);
+				SetParent(panel, hw);
+				ShowWindow(panel, SW_SHOW);
+				UpdateWindow(panel);
 
 				if(pt.y < 50)
 					ShowWindow(hw,SW_SHOWMAXIMIZED);
