@@ -273,8 +273,8 @@ int ui_shape_draw_cardinal(graphic_context *gc, pointex *pt)
 
 int ui_text_draw(graphic_context &gc, string text, color c, int x, int y, int mode)
 {
-	const FontFamily &cgdi_fm = FontFamily(L"Roboto");
-	static Font       cgdi_font(&cgdi_fm, 8, FontStyleBold);
+	const FontFamily &cgdi_fm = FontFamily(L"Cabin");
+	static Font       cgdi_font(&cgdi_fm, 9);
 
 	SolidBrush brush (Color (color_get_a(c), color_get_r(c), color_get_g(c), color_get_b(c)));
 	gc.DrawString(text, -1, &cgdi_font, PointF(x, y), &brush);

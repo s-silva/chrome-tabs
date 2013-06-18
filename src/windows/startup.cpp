@@ -233,7 +233,7 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	wc.hInstance=hInst; 
 	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
 	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(172, 172, 172)); 
+	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
 	wc.lpszMenuName=NULL; 
 	wc.lpszClassName=uni("Resample1CWindow"); 
 
@@ -258,12 +258,12 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 
 	hwnd2 = CreateWindow(uni("Resample1CWindow"),uni("Tab 1"), 
 		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,58,1000,700, 
+		0,84,1000,700, 
 		hwnd,NULL,hInst,NULL); 
 
 	HWND hwnd3 = CreateWindow(uni("Resample1CWindow"),uni("Tab 2"), 
 		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,58,1000,700, 
+		0,84,1000,700, 
 		hwnd,NULL,hInst,NULL); 
 
 	current_tab_id = tab_new(uni("Tab 1"), winid);
@@ -331,8 +331,13 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 	{
 		if(tab_set[i].wnd == hwnd)
 		{
-			ui_shape_draw_rect(gr, 0xffe2ebf1, xpos, 2, tab_width - 3, 21);
-			ui_text_draw(gr, tab_set[i].title, 0xff60898c, xpos + 4, 5, 0);
+			if(tab_set[i].isactive)
+				ui_shape_draw_rect(gr, 0xffe3ebf1, xpos, 5, tab_width - 3, 27);
+			else
+				ui_shape_draw_rect(gr, 0xffe3ebf1, xpos, 5, tab_width - 3, 29);
+
+			ui_shape_draw_rect(gr, 0xffbcc6cf, xpos + 7, 6 + 5, 16, 16);
+			ui_text_draw(gr, tab_set[i].title, 0xff60898c, xpos + 28, 6 + 5, 0);
 			xpos += tab_width;
 		}
 	}
@@ -383,8 +388,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			Color color2( 122, 200, 200, 200 );
 			SolidBrush brush2 (Color (122 /*A*/, 200 /*R*/, 200 /*G*/, 200 /*B*/));
 
-			ui_shape_draw_rect(gr, 0xff878787, 0, 58, r.right, r.bottom);
-			ui_shape_draw_rect(gr, 0xffe2ebf1, 0, 23, r.right, 35);
+			ui_shape_draw_rect(gr, 0xffd9e3ec, 0, 0, r.right, 34);
+			ui_shape_draw_rect(gr, 0xffbcc6cf, 0, 84, r.right, r.bottom);
+			ui_shape_draw_rect(gr, 0xffe3ebf1, 0, 34, r.right, 50);
+
+			ui_shape_draw_rect(gr, 0xffeff4f7, 8, 34 + 7, 42, 36);
+			ui_shape_draw_rect(gr, 0xffeff4f7, 8 + 42 + 4, 34 + 7, 42, 36);
+			ui_shape_draw_rect(gr, 0xffeff4f7, 8 + (42 * 2) + 8, 34 + 7, 42, 36);
+
+			ui_shape_draw_rect(gr, 0xfff4f7fa, 147, 34 + 7, r.right - 147 - 53, 36);
+
+			ui_shape_draw_rect(gr, 0xffeff4f7, r.right - 47, 34 + 7, 42, 36);
 
 			
 			EndPaint(hwnd, &ps);
@@ -541,8 +555,11 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			if(hw)
 			{
 				///SetParent(hwnd2, hw);
+				RECT rc;
+				GetClientRect(hw, &rc);
 				HWND panel = tab_getpanel(current_tab_id);
 				SetParent(panel, hw);
+				
 				ShowWindow(panel, SW_SHOW);
 				UpdateWindow(panel);
 
@@ -550,6 +567,8 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 					ShowWindow(hw,SW_SHOWMAXIMIZED);
 				else
 					ShowWindow(hw,SW_SHOW);
+
+				SetWindowPos(panel, NULL, 0, 84, rc.right, rc.bottom - 84, SWP_NOZORDER); 
 
 				UpdateWindow(hw); 
 			}
