@@ -12,6 +12,8 @@ HWND hwnd2 = 0, hwnd1 = 0, hwnd_tabbutton = 0;
 int cap = 0;
 int mwindow = 0;
 
+POINT mdown_pos;
+
 #define POPUP_STYLES   (WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_SYSMENU | WS_CAPTION | WS_THICKFRAME)
 #define POPUP_EXSTYLES (WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE)
 #define CHILD_STYLES   (WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS)
@@ -193,6 +195,15 @@ void tab_cleanwindows()
 
 }
 
+int tab_get_id_bypoint(HWND wnd, int x)
+{
+
+}
+
+int tab_activate(int tabid)
+{
+	
+}
 
 /* main */
 
@@ -294,7 +305,7 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 
 	hwnd_tabbutton = CreateWindow(uni("ResampleTabButton"),application_title, 
 		(WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,0,160, 23,
+		0,0,160, 30,
 		hwnd,NULL,hInst,NULL); 
 
 
@@ -322,8 +333,11 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 	int i, xpos = 10;
 	int tab_width = 160;
 
-	//tab_width = w / tab_count;
-	//if(tab_width > 160) tab_width = 160;
+	if(!tab_count) return;
+
+	tab_width = (w - 90) / tab_count;
+	if(tab_width > 160) tab_width = 160;
+	else if(tab_width < 30) tab_width = 30;
 
 	ui_shape_draw_rect(gr, 0xffd9e3ec, 0, 0, w, 23);
 
@@ -432,6 +446,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						ShowWindow(hwnd_tabbutton, SW_SHOW);
 						SetWindowPos(hwnd_tabbutton, 0, pt.x, pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
+						RECT rc;
+						int w, tab_width = 160;
+
+						GetClientRect(hwnd, &rc);
+						w = rc.right;
+
+						if(!tab_count) break;
+
+						tab_width = (w - 90) / tab_count;
+						if(tab_width > 160) tab_width = 160;
+						else if(tab_width < 30) tab_width = 30;
+
+						mdown_pos.x = (LOWORD(lparam) - 10) % tab_width;
+						mdown_pos.y = HIWORD(lparam) - 5;
+
 						//SendMessage(hwnd_tabbutton, WM_NCLBUTTONDOWN, HTCAPTION, 0); 
 						cap = 1;
 					}
@@ -456,16 +485,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				GetClientRect(hwnd, &r);
 
 				clp.x = 0;
-				clp.y = 2;
+				clp.y = 5;
 
 				ClientToScreen(hwnd, &clp);
 
 
 				if(LOWORD(lparam) < -20 || LOWORD(lparam) > r.right || HIWORD(lparam) < 0 || HIWORD(lparam) > 45)
 				{
-					SetWindowPos(hwnd_tabbutton, NULL, p.x, p.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+					SetWindowPos(hwnd_tabbutton, NULL, p.x - mdown_pos.x, p.y - mdown_pos.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
 				}else{
-					SetWindowPos(hwnd_tabbutton, NULL, p.x, clp.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
+					SetWindowPos(hwnd_tabbutton, NULL, p.x - mdown_pos.x, clp.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER); 
 					draw_tabs(hwnd, current_tab_id, p.x, 0);
 				}
 				return 0;
