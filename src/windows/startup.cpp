@@ -265,8 +265,6 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	int winid = twindow_new(hwnd);
 	
 
-	draw_tabs(hwnd, -1, 0, 0);
-
 	hwnd2 = CreateWindow(uni("Resample1CWindow"),uni("Tab 1"), 
 		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
 		0,84,1000,700, 
@@ -285,6 +283,8 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 
 	ShowWindow(hwnd2,nCmdShow); 
 	UpdateWindow(hwnd2); 
+
+	draw_tabs(hwnd, -1, 0, 0);
 
 
 
