@@ -339,7 +339,7 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 	if(tab_width > 160) tab_width = 160;
 	else if(tab_width < 30) tab_width = 30;
 
-	ui_shape_draw_rect(gr, 0xffd9e3ec, 0, 0, w, 23);
+	ui_shape_draw_rect(gr, 0xffd9e3ec, 0, 0, w, 34);
 
 	for(i=0; i<tab_count; i++)
 	{
