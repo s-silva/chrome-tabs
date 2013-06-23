@@ -93,7 +93,7 @@ int tab_new(const string title, int windowid)
 	str_cpy(tab_set[tc].title, title);
 
 	tab_set[tc].index = tc;
-	tab_set[tc].isactive = 1;
+	tab_set[tc].isactive = 0;
 	tab_set[tc].window_index = windowid;
 	tab_set[tc].data = 0;
 	tab_set[tc].wnd = tab_windows[windowid];
@@ -200,9 +200,28 @@ int tab_get_id_bypoint(HWND wnd, int x)
 
 }
 
-int tab_activate(int tabid)
+int tab_activate(HWND wnd, int tabposid)
 {
-	
+	int i, c = 0, cid = -1;
+
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].wnd == wnd)
+		{
+			if(c == tabposid)
+			{
+				tab_set[i].isactive = 1;
+				ShowWindow(tab_set[i].panel, SW_SHOW);
+				cid = i;
+			}else{
+				tab_set[i].isactive = 0;
+				ShowWindow(tab_set[i].panel, SW_HIDE);
+			}
+			c++;
+		}
+	}
+
+	return cid;
 }
 
 /* main */
@@ -275,11 +294,19 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 		0,84,1000,700, 
 		hwnd,NULL,hInst,NULL); 
 
+	HWND hwnd4 = CreateWindow(uni("Resample1CWindow"),uni("Tab 3"), 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
+		0,84,1000,700, 
+		hwnd,NULL,hInst,NULL); 
+
 	current_tab_id = tab_new(uni("Tab 1"), winid);
 	tab_setpanel(current_tab_id, hwnd2);
 
 	int nid = tab_new(uni("Tab 2"), winid);
 	tab_setpanel(nid, hwnd3);
+
+	int nid2 = tab_new(uni("Tab 3"), winid);
+	tab_setpanel(nid2, hwnd4);
 
 	ShowWindow(hwnd2,nCmdShow); 
 	UpdateWindow(hwnd2); 
@@ -345,7 +372,7 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 	{
 		if(tab_set[i].wnd == hwnd)
 		{
-			if(tab_set[i].isactive)
+			if(!tab_set[i].isactive)
 				ui_shape_draw_rect(gr, 0xffe3ebf1, xpos, 5, tab_width - 3, 27);
 			else
 				ui_shape_draw_rect(gr, 0xffe3ebf1, xpos, 5, tab_width - 3, 29);
@@ -438,25 +465,26 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}else{
 					POINT pt;
 					GetCursorPos(&pt);
+					
+					RECT rc;
+					int w, tab_width = 160;
 
-					current_tab_id = twindow_get_ctab(hwnd);
+					GetClientRect(hwnd, &rc);
+					w = rc.right;
+
+					if(!tab_count) break;
+
+					tab_width = (w - 90) / tab_count;
+					if(tab_width > 160) tab_width = 160;
+					else if(tab_width < 30) tab_width = 30;
+
+					current_tab_id = tab_activate(hwnd, (LOWORD(lparam) - 10) / tab_width);
 
 					if(current_tab_id >= 0)
 					{
 						ShowWindow(hwnd_tabbutton, SW_SHOW);
 						SetWindowPos(hwnd_tabbutton, 0, pt.x, pt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
-						RECT rc;
-						int w, tab_width = 160;
-
-						GetClientRect(hwnd, &rc);
-						w = rc.right;
-
-						if(!tab_count) break;
-
-						tab_width = (w - 90) / tab_count;
-						if(tab_width > 160) tab_width = 160;
-						else if(tab_width < 30) tab_width = 30;
 
 						mdown_pos.x = (LOWORD(lparam) - 10) % tab_width;
 						mdown_pos.y = HIWORD(lparam) - 5;
