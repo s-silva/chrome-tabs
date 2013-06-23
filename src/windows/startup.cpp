@@ -4,6 +4,7 @@
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
 LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
 LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
+LRESULT CALLBACK WindowProcSub(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) ;
 void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible);
 
 HINSTANCE application_instance = 0;
@@ -34,6 +35,8 @@ struct window_tab
 int   tab_count = 0;
 HWND  tab_windows[32];
 int   current_tab_id = 0;
+
+HWND hwnd_main = 0;
 
 /* tab management */
 
@@ -188,8 +191,14 @@ void tab_cleanwindows()
 	{
 		if(tab_get_tab_count(i) == 0)
 		{
-			ShowWindow(tab_windows[i], SW_HIDE);
-			twindow_remove(tab_windows[i]);
+			//ShowWindow(tab_windows[i], SW_HIDE);
+			if(tab_windows[i] && tab_windows[i] != hwnd_main)
+			{
+				DestroyWindow(tab_windows[i]);
+				tab_windows[i] = 0;
+				twindow_remove(tab_windows[i]);
+			}
+			
 		}
 	}
 
@@ -270,6 +279,20 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	if (!RegisterClass(&wc)) 
 		return 0; 
 
+	wc.style=CS_HREDRAW | CS_VREDRAW; 
+	wc.lpfnWndProc=WindowProcSub; 
+	wc.cbClsExtra=0; 
+	wc.cbWndExtra=0; 
+	wc.hInstance=hInst; 
+	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
+	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
+	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
+	wc.lpszMenuName=NULL; 
+	wc.lpszClassName=uni("Resample1SubTWindow"); 
+
+	if (!RegisterClass(&wc)) 
+		return 0; 
+
 	hwnd1 = hwnd = CreateWindowEx(WS_EX_WINDOWEDGE | WS_EX_APPWINDOW, application_title,application_title, 
 		WS_THICKFRAME | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED, 
 		CW_USEDEFAULT,CW_USEDEFAULT,1000,500, 
@@ -277,6 +300,8 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 
 	if (!hwnd) 
 		return 0; 
+
+	hwnd_main = hwnd;
 
 	ShowWindow(hwnd,nCmdShow); 
 	UpdateWindow(hwnd); 
@@ -590,8 +615,8 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 			if(!hover_tab_window)
 			{
 				
-				hw = CreateWindowEx(WS_EX_WINDOWEDGE, application_title,application_title, 
-								WS_OVERLAPPEDWINDOW, 
+				hw = CreateWindowEx( WS_EX_TOOLWINDOW, uni("Resample1SubTWindow"),application_title, 
+								WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, 
 								pt.x,pt.y,1000,500, 
 								NULL,NULL,application_instance,NULL); 
 
@@ -635,6 +660,19 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 
 	default: 
 		return DefWindowProc(hwnd, msg, wparam, lparam); 
+	} 
+	return 0; 
+} 
+
+LRESULT CALLBACK WindowProcSub(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
+{ 
+	switch (msg) 
+	{ 
+	case WM_DESTROY: 
+		break; 
+
+	default: 
+		return WindowProc(hwnd, msg, wparam, lparam);
 	} 
 	return 0; 
 } 
