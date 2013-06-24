@@ -1,4 +1,62 @@
-#include "../main.h"
+/**
+ * The MIT License (MIT)
+ * 
+ * Copyright (c) 2013, Sandaruwan Silva <c-h [-a-t] users [-dot-] sf [-dot-] net>
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+**/
+
+#include <windows.h>
+#include <gdiplus.h>
+#include <assert.h>
+
+using namespace Gdiplus;
+
+typedef wchar_t *string;
+typedef wchar_t letter;
+typedef Graphics graphic_context;
+typedef DWORD color;
+
+typedef struct _box
+{
+	int x, y, w, h;
+} box;
+
+typedef struct _point
+{
+	int x, y;
+} point;
+
+typedef struct _pointex
+{
+	int x, y, d1, d2;
+} pointex;
+
+
+#define uni(x) L ## x
+#define str_len(s) wcslen(s)
+#define str_cpy(d, s)       wcscpy(d, s)
+#define color_get_r(rgb)   ((BYTE) ((rgb) >> 16)) 
+#define color_get_g(rgb)   ((BYTE) (((WORD) (rgb)) >> 8)) 
+#define color_get_b(rgb)   ((BYTE) (rgb))
+#define color_get_a(rgb)   ((BYTE) ((rgb) >> 24)) 
+#define application_title uni("Axel Browser")
 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
@@ -38,6 +96,25 @@ int   current_tab_id = 0;
 
 HWND hwnd_main = 0;
 
+
+int ui_shape_draw_rect(graphic_context &gc, color c, int x, int y, int w, int h)
+{
+	SolidBrush brush (Color (color_get_a(c), color_get_r(c), color_get_g(c), color_get_b(c)));
+	gc.FillRectangle (&brush, x, y, w, h);
+	return 0;
+}
+
+int ui_text_draw(graphic_context &gc, string text, color c, int x, int y, int mode)
+{
+	const FontFamily &cgdi_fm = FontFamily(L"Cabin");
+	static Font       cgdi_font(&cgdi_fm, 9);
+
+	SolidBrush brush (Color (color_get_a(c), color_get_r(c), color_get_g(c), color_get_b(c)));
+	gc.DrawString(text, -1, &cgdi_font, PointF(x, y), &brush);
+	return 0;
+}
+
+
 /* tab management */
 
 int twindow_getid(HWND wnd)
@@ -69,6 +146,7 @@ int twindow_remove(HWND wnd)
 			window_count--;
 		}
 	}
+	return 0;
 }
 
 int twindow_get_ctab(HWND wnd)
@@ -89,10 +167,10 @@ int tab_new(const string title, int windowid)
 	int tc = tab_count;
 
 	tab_count++;
-	tab_set = (struct window_tab*) sys_mem_realloc(tab_set, sizeof(struct window_tab) * tab_count);
+	tab_set = (struct window_tab*) realloc(tab_set, sizeof(struct window_tab) * tab_count);
 	if(!tab_set) return 0;
 
-	tab_set[tc].title = (string)sys_mem_alloc(str_len(title) + 16);
+	tab_set[tc].title = (string)malloc(str_len(title) + 16);
 	str_cpy(tab_set[tc].title, title);
 
 	tab_set[tc].index = tc;
@@ -116,7 +194,7 @@ HWND tab_getpanel(int tc)
 
 int tab_remove(int windowid, int tabid)
 {
-
+	return 0;
 }
 
 int tab_uninit()
@@ -126,10 +204,10 @@ int tab_uninit()
 	for(i=0; i<tab_count; i++)
 	{
 		if(tab_set[i].title)
-			sys_mem_free(tab_set[i].title);
+			free(tab_set[i].title);
 	}
 
-	if(tab_set) sys_mem_free(tab_set);
+	if(tab_set) free(tab_set);
 
 	tab_set = 0;
 	tab_count = 0;
@@ -140,7 +218,7 @@ int tab_uninit()
 
 HWND tab_get_window(int tabid)
 {
-
+	return (HWND)0;
 }
 
 int tab_get_tab_count(int winid)
@@ -429,7 +507,6 @@ void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible)
 	ReleaseDC(hwnd, hdc);
 	//EndPaint(hwnd, &ps);
 }
-
 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
