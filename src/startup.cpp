@@ -50,19 +50,19 @@ typedef struct _pointex
 
 
 #define uni(x) L ## x
-#define str_len(s) wcslen(s)
-#define str_cpy(d, s)       wcscpy(d, s)
+#define str_len(s)         wcslen(s)
+#define str_cpy(d, s)      wcscpy(d, s)
 #define color_get_r(rgb)   ((BYTE) ((rgb) >> 16)) 
 #define color_get_g(rgb)   ((BYTE) (((WORD) (rgb)) >> 8)) 
 #define color_get_b(rgb)   ((BYTE) (rgb))
 #define color_get_a(rgb)   ((BYTE) ((rgb) >> 24)) 
-#define application_title uni("Axel Browser")
+#define application_title  uni("Axel Browser")
 
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
-LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
-LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
-LRESULT CALLBACK WindowProcSub(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) ;
+LRESULT CALLBACK callback_window_main(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
+LRESULT CALLBACK callback_window_panel(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
+LRESULT CALLBACK callback_window_host(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+LRESULT CALLBACK callback_window_tab(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam); 
 void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible);
 
 HINSTANCE application_instance = 0;
@@ -72,11 +72,6 @@ int cap = 0;
 int mwindow = 0;
 
 POINT mdown_pos;
-
-#define POPUP_STYLES   (WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_SYSMENU | WS_CAPTION | WS_THICKFRAME)
-#define POPUP_EXSTYLES (WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE)
-#define CHILD_STYLES   (WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS)
-#define CHILD_EXSTYLES (0)
 
 int window_count = 0;
 
@@ -96,6 +91,8 @@ int   current_tab_id = 0;
 
 HWND hwnd_main = 0;
 
+
+/* basic drawing */
 
 int ui_shape_draw_rect(graphic_context &gc, color c, int x, int y, int w, int h)
 {
@@ -240,6 +237,8 @@ int tab_move(int tabid, int winid)
 
 	tab_set[tabid].window_index = winid;
 	tab_set[tabid].wnd = tab_windows[winid];
+
+	return 0;
 }
 
 HWND tab_is_window(int x, int y)
@@ -284,7 +283,7 @@ void tab_cleanwindows()
 
 int tab_get_id_bypoint(HWND wnd, int x)
 {
-
+	return 0;
 }
 
 int tab_activate(HWND wnd, int tabposid)
@@ -314,71 +313,57 @@ int tab_activate(HWND wnd, int tabposid)
 /* main */
 
 
-
 int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow) 
 { 
-	WNDCLASS wc; 
-	HWND hwnd; 
-	MSG msg; 
-
+	WNDCLASS            wc; 
+	HWND                hwnd; 
+	MSG                 msg; 
 	GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR           gdiplusToken;
+
+
 	Status st = GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 	assert(st == Ok);
-	if (st != Ok) return FALSE;
+	if(st != Ok) return FALSE;
 
 	application_instance = hInst;
 
-	wc.style=CS_HREDRAW | CS_VREDRAW; 
-	wc.lpfnWndProc=WindowProc; 
-	wc.cbClsExtra=0; 
-	wc.cbWndExtra=0; 
-	wc.hInstance=hInst; 
-	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
-	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xd9, 0xe3, 0xec)); 
-	wc.lpszMenuName=NULL; 
-	wc.lpszClassName=application_title; 
+	wc.style         = CS_HREDRAW | CS_VREDRAW; 
+	wc.lpfnWndProc   = callback_window_main; 
+	wc.cbClsExtra    = 0; 
+	wc.cbWndExtra    = 0; 
+	wc.hInstance     = hInst; 
+	wc.hIcon         = LoadIcon(hInst,(LPCTSTR)1); 
+	wc.hCursor       = LoadCursor(NULL,IDC_ARROW); 
+	wc.hbrBackground = (HBRUSH)CreateSolidBrush(RGB(0xd9, 0xe3, 0xec)); 
+	wc.lpszMenuName  = NULL; 
+	wc.lpszClassName = application_title; 
 
-	if (!RegisterClass(&wc)) 
-		return 0; 
+	if(!RegisterClass(&wc)) return 0; 
 
-	wc.style=CS_HREDRAW | CS_VREDRAW; 
-	wc.lpfnWndProc=WindowProc2; 
-	wc.cbClsExtra=0; 
-	wc.cbWndExtra=0; 
-	wc.hInstance=hInst; 
-	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
-	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
-	wc.lpszMenuName=NULL; 
-	wc.lpszClassName=uni("Resample1CWindow"); 
+	wc.lpfnWndProc   = callback_window_panel;
+	wc.hbrBackground = (HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
+	wc.lpszClassName = uni("Resample1CWindow"); 
 
-	if (!RegisterClass(&wc)) 
-		return 0; 
+	if(!RegisterClass(&wc)) return 0; 
 
-	wc.style=CS_HREDRAW | CS_VREDRAW; 
-	wc.lpfnWndProc=WindowProcSub; 
-	wc.cbClsExtra=0; 
-	wc.cbWndExtra=0; 
-	wc.hInstance=hInst; 
-	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
-	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
-	wc.lpszMenuName=NULL; 
-	wc.lpszClassName=uni("Resample1SubTWindow"); 
+	wc.lpfnWndProc   = callback_window_host; 
+	wc.hbrBackground = (HBRUSH)CreateSolidBrush(RGB(0xbc, 0xc6, 0xcf)); 
+	wc.lpszClassName = uni("Resample1SubTWindow"); 
 
-	if (!RegisterClass(&wc)) 
-		return 0; 
+	if(!RegisterClass(&wc)) return 0; 
 
-	hwnd1 = hwnd = CreateWindowEx(WS_EX_WINDOWEDGE | WS_EX_APPWINDOW, application_title,application_title, 
+	wc.lpfnWndProc   = callback_window_tab; 
+	wc.hbrBackground = (HBRUSH)CreateSolidBrush(RGB(0xe2, 0xeb, 0xf1)); 
+	wc.lpszClassName = uni("ResampleTabButton"); 
+
+	if(!RegisterClass(&wc)) return 0; 
+
+	hwnd1 = hwnd = CreateWindowEx(WS_EX_WINDOWEDGE | WS_EX_APPWINDOW, application_title, application_title, 
 		WS_THICKFRAME | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_OVERLAPPED, 
-		CW_USEDEFAULT,CW_USEDEFAULT,1000,500, 
-		NULL,NULL,hInst,NULL); 
+		CW_USEDEFAULT, CW_USEDEFAULT, 1000, 500, NULL, NULL, hInst, NULL); 
 
-	if (!hwnd) 
-		return 0; 
-
+	if (!hwnd) return 0; 
 	hwnd_main = hwnd;
 
 	ShowWindow(hwnd,nCmdShow); 
@@ -388,27 +373,21 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	
 
 	hwnd2 = CreateWindow(uni("Resample1CWindow"),uni("Tab 1"), 
-		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,84,1000,700, 
-		hwnd,NULL,hInst,NULL); 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 0,84,1000,700, hwnd,NULL,hInst,NULL); 
 
 	HWND hwnd3 = CreateWindow(uni("Resample1CWindow"),uni("Tab 2"), 
-		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,84,1000,700, 
-		hwnd,NULL,hInst,NULL); 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 0,84,1000,700, hwnd,NULL,hInst,NULL); 
 
 	HWND hwnd4 = CreateWindow(uni("Resample1CWindow"),uni("Tab 3"), 
-		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
-		0,84,1000,700, 
-		hwnd,NULL,hInst,NULL); 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 0,84,1000,700, hwnd,NULL,hInst,NULL); 
 
-	current_tab_id = tab_new(uni("Tab 1"), winid);
+	current_tab_id = tab_new((const string)uni("Tab 1"), winid);
 	tab_setpanel(current_tab_id, hwnd2);
 
-	int nid = tab_new(uni("Tab 2"), winid);
+	int nid = tab_new((const string)uni("Tab 2"), winid);
 	tab_setpanel(nid, hwnd3);
 
-	int nid2 = tab_new(uni("Tab 3"), winid);
+	int nid2 = tab_new((const string)uni("Tab 3"), winid);
 	tab_setpanel(nid2, hwnd4);
 
 	ShowWindow(hwnd2,nCmdShow); 
@@ -417,21 +396,6 @@ int wWinMain(HINSTANCE hInst,HINSTANCE,LPWSTR,int nCmdShow)
 	draw_tabs(hwnd, -1, 0, 0);
 
 
-
-
-	wc.style=CS_HREDRAW | CS_VREDRAW; 
-	wc.lpfnWndProc=WindowProc_TabButton; 
-	wc.cbClsExtra=0; 
-	wc.cbWndExtra=0; 
-	wc.hInstance=hInst; 
-	wc.hIcon=LoadIcon(hInst,(LPCTSTR)1); 
-	wc.hCursor=LoadCursor(NULL,IDC_ARROW); 
-	wc.hbrBackground=(HBRUSH)CreateSolidBrush(RGB(0xe2, 0xeb, 0xf1)); 
-	wc.lpszMenuName=NULL; 
-	wc.lpszClassName=uni("ResampleTabButton"); 
-
-	if (!RegisterClass(&wc)) 
-		return 0; 
 
 	hwnd_tabbutton = CreateWindow(uni("ResampleTabButton"),application_title, 
 		(WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 
@@ -490,7 +454,6 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 
 void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible)
 {
-	PAINTSTRUCT ps; 
 	HDC hdc; 
 	RECT r; 
 	
@@ -509,7 +472,7 @@ void draw_tabs(HWND hwnd, int ctabid, int ctabx, int isctabvisible)
 }
 
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
+LRESULT CALLBACK callback_window_main(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 { 
 	switch (msg) 
 	{ 
@@ -639,7 +602,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 } 
 
 
-LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
+LRESULT CALLBACK callback_window_panel(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 { 
 	switch (msg) 
 	{ 
@@ -675,7 +638,7 @@ LRESULT CALLBACK WindowProc2(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 
 
-LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
+LRESULT CALLBACK callback_window_tab(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 { 
 	switch (msg) 
 	{ 
@@ -741,7 +704,7 @@ LRESULT CALLBACK WindowProc_TabButton(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 	return 0; 
 } 
 
-LRESULT CALLBACK WindowProcSub(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
+LRESULT CALLBACK callback_window_host(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 { 
 	switch (msg) 
 	{ 
@@ -749,7 +712,14 @@ LRESULT CALLBACK WindowProcSub(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 		break; 
 
 	default: 
-		return WindowProc(hwnd, msg, wparam, lparam);
+		return callback_window_main(hwnd, msg, wparam, lparam);
 	} 
 	return 0; 
 } 
+
+
+/*
+ *---------------------------------------------------------------------------------------
+ * eof.
+ *
+ */
