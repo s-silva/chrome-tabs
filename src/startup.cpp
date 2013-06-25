@@ -259,6 +259,29 @@ HWND tab_is_window(int x, int y)
 	return 0;
 }
 
+int tab_getwindowid(HWND wnd)
+{
+	int i;
+
+	for(i=0; i<window_count; i++)
+	{
+		if(wnd == tab_windows[i])
+			return i;
+	}
+
+	return 0;
+}
+
+HWND tab_add(HWND hwnd, const string title)
+{
+	HWND newwnd = CreateWindow(uni("Resample1CWindow"),title, 
+		(WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS), 0,84,1000,700, hwnd,NULL,application_instance,NULL); 
+
+	int current_tab_id = tab_new((const string)title, tab_getwindowid(hwnd));
+	tab_setpanel(current_tab_id, newwnd);
+
+	return newwnd;
+}
 
 void tab_cleanwindows()
 {
@@ -308,6 +331,37 @@ int tab_activate(HWND wnd, int tabposid)
 	}
 
 	return cid;
+}
+
+int tab_getid(HWND wnd, int x, int w)
+{
+	/* -1  = add new */
+	int tabposid;
+	int i, c = 0, cid = -1;
+	int tab_width = 160;
+
+	if(!tab_count) return 0;
+
+	tab_width = (w - 90) / tab_count;
+	if(tab_width > 160) tab_width = 160;
+	else if(tab_width < 30) tab_width = 30;
+
+	tabposid = (x - 10) / tab_width;
+
+	for(i=0; i<tab_count; i++)
+	{
+		if(tab_set[i].wnd == wnd)
+		{
+			if(c == tabposid)
+			{
+				return i;
+			}
+			c++;
+		}
+	}
+
+	if(x - ((c * tab_width) + 10) < 30) return -1;
+	return 0;
 }
 
 /* main */
@@ -449,6 +503,10 @@ void draw_tabs_gr(Graphics &gr, HWND hwnd, int w, int ctabid, int ctabx, int isc
 			xpos += tab_width;
 		}
 	}
+
+	ui_shape_draw_rect(gr, 0xffe3ebf1, xpos, 5, 30, 27);
+	ui_text_draw(gr, uni("+"), 0xff60898c, xpos + 10, 6 + 5, 0);
+	xpos += tab_width;
 }
 
 
@@ -542,6 +600,14 @@ LRESULT CALLBACK callback_window_main(HWND hwnd, UINT msg, WPARAM wparam, LPARAM
 					tab_width = (w - 90) / tab_count;
 					if(tab_width > 160) tab_width = 160;
 					else if(tab_width < 30) tab_width = 30;
+
+					if(tab_getid(hwnd, LOWORD(lparam), w) == -1)
+					{
+						tab_add(hwnd, uni("New Tab"));
+						break;
+					}
+
+					if((LOWORD(lparam) - 10) / tab_width)
 
 					current_tab_id = tab_activate(hwnd, (LOWORD(lparam) - 10) / tab_width);
 
