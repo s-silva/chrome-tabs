@@ -1,4 +1,4 @@
-#Chrome Tabs
+# Chrome Tabs
 
 An implementation of Chrome/Firefox style draggable tabs in C++ for Windows.
 
@@ -8,17 +8,17 @@ window
 * Windows without any tabs left will be closed.
 * Clicking on a tab will switch the child window belong to the tab in front.
 
-##Screenshot
+## Screenshot
 
 ![Screenshot](/img/sc.png)
 
-##To Do
+## To Do
 
 * The user should be able to arrange the tabs.
 * Display a thumbnail of the window when the user drags the tab
   out of the tab area.
 
-##Building
+## Building
 
 If you're using MinGW/MinGW64, edit files in 'build\win' to include
 your MinGW directories.
